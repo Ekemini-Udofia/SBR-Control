@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot Testbench</title>
+  <meta name="description" content="Professional instrumentation, live robot balance visualization, and real-time PID tuning console for self-balancing robots." />
+  <meta property="og:title" content="Robot Testbench" />
+  <meta property="og:description" content="Professional instrumentation, live robot balance visualization, and real-time PID tuning console for self-balancing robots." />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <!-- Google Fonts: IBM Plex Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN (Self-contained, no build required for GitHub Pages) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"IBM Plex Sans"', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    body {
+      font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #0c0d10;
+      color: #e2e4e9;
+      margin: 0;
+      padding: 0;
+      overflow-x: hidden;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #101115;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #252833;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #363a48;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      background: #e2e4e9;
+      border: 1px solid #1c1d24;
+      cursor: pointer;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-[#0c0d10] text-[#e2e4e9] min-h-screen flex flex-col font-sans selection:bg-zinc-700 selection:text-white">
+
+  <!-- Header -->
+  <header class="border-b border-[#22242c] bg-[#111216] px-4 sm:px-6 py-2.5 sm:py-3">
+    <div class="max-w-[1400px] mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="text-xs sm:text-sm font-semibold tracking-wider uppercase text-zinc-100 font-mono truncate">
+          Robot Testbench
+        </span>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="connectBtn" class="px-3 sm:px-3.5 py-1.5 text-xs font-mono font-medium text-zinc-200 bg-[#21232c] border border-[#30333f] rounded hover:bg-[#2b2d39] hover:border-zinc-500 transition-colors flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95">
+          <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m7 7 10 10-5 5V2l5 5L7 17"/>
+          </svg>
+          <span id="connectBtnText">Connect Robot</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Telemetry Strip -->
+  <div class="bg-[#111216] border-b border-[#22242c] px-4 sm:px-6 py-2.5 sm:py-3">
+    <div class="max-w-[1400px] mx-auto grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 divide-y sm:divide-y-0 sm:divide-x divide-[#22242c]">
+      
+      <!-- Pitch Angle -->
+      <div class="px-2 sm:px-3 first:pl-0 pt-0">
+        <div class="text-[11px] sm:text-xs font-mono text-zinc-400">
+          Pitch Angle (θ)
+        </div>
+        <div class="flex items-baseline mt-0.5 sm:mt-1">
+          <span id="telemetryAngle" class="text-xl sm:text-2xl font-mono font-bold tabular-nums text-zinc-100">+0.00</span>
+          <span class="text-xs font-mono text-zinc-400 ml-1">°</span>
+        </div>
+      </div>
+
+      <!-- Angular Rate -->
+      <div class="px-2 sm:px-3 pt-0">
+        <div class="text-[11px] sm:text-xs font-mono text-zinc-400">
+          Angular Rate (ω)
+        </div>
+        <div class="flex items-baseline mt-0.5 sm:mt-1">
+          <span id="telemetryRate" class="text-xl sm:text-2xl font-mono font-bold tabular-nums text-zinc-100">+0.0</span>
+          <span class="text-xs font-mono text-zinc-400 ml-1">°/s</span>
+        </div>
+      </div>
+
+      <!-- Motor Output -->
+      <div class="px-2 sm:px-3 pt-2 sm:pt-0">
+        <div class="text-[11px] sm:text-xs font-mono text-zinc-400">
+          Motor Output (PWM)
+        </div>
+        <div class="flex items-baseline mt-0.5 sm:mt-1">
+          <span id="telemetryMotor" class="text-xl sm:text-2xl font-mono font-bold tabular-nums text-zinc-100">0</span>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="px-2 sm:px-3 pt-2 sm:pt-0">
+        <div class="text-[11px] sm:text-xs font-mono text-zinc-400">
+          Status
+        </div>
+        <div class="flex items-baseline mt-0.5 sm:mt-1">
+          <span id="telemetryStatus" class="text-base sm:text-lg font-mono font-bold text-emerald-400">ACTIVE</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Alert Banner -->
+  <div id="alertBanner" class="hidden border-b border-[#22242c] bg-[#121318] px-4 sm:px-6 py-2 text-xs font-mono flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span id="alertIcon"></span>
+      <span id="alertText" class="text-zinc-300"></span>
+    </div>
+    <button id="alertClose" class="text-zinc-500 hover:text-zinc-300 transition-colors ml-4 text-[11px]">✕</button>
+  </div>
+
+  <!-- Main Grid -->
+  <main class="flex-1 max-w-[1400px] w-full mx-auto p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6">
+    
+    <!-- Left: Live Robot Tilt View -->
+    <div class="lg:col-span-7 flex flex-col">
+      <div class="bg-[#141519] border border-[#22242c] rounded flex flex-col h-full">
+        
+        <!-- Header with Unboxed Angle Readout -->
+        <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-[#22242c] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="22" y1="12" x2="18" y2="12"/>
+              <line x1="6" y1="12" x2="2" y2="12"/>
+              <line x1="12" y1="6" x2="12" y2="2"/>
+              <line x1="12" y1="22" x2="12" y2="18"/>
+            </svg>
+            <span class="text-xs sm:text-sm font-mono font-semibold tracking-wide text-zinc-200">
+              Live Robot Tilt
+            </span>
+          </div>
+          <!-- Clean Unboxed Text Angle Readout -->
+          <div class="flex items-center gap-1.5 font-mono text-xs sm:text-sm">
+            <span class="text-zinc-400">Angle:</span>
+            <span id="liveAngleText" class="font-semibold tabular-nums text-zinc-100">+0.00°</span>
+          </div>
+        </div>
+
+        <!-- SVG Robot Stage -->
+        <div class="relative flex-1 min-h-[280px] sm:min-h-[360px] bg-[#0c0d10] flex items-center justify-center select-none overflow-hidden">
+          <div class="absolute inset-0 bg-[linear-gradient(to_right,#191b22_1px,transparent_1px),linear-gradient(to_bottom,#191b22_1px,transparent_1px)] bg-[size:28px_28px] opacity-40 pointer-events-none"></div>
+
+          <svg id="robotSvg" viewBox="0 0 560 380" class="w-full h-full max-h-[460px] relative z-10">
+            <defs>
+              <radialGradient id="comGlow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stop-color="#f59e0b" stop-opacity="0.4" />
+                <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+              </radialGradient>
+            </defs>
+
+            <!-- Ground Line -->
+            <line x1="40" y1="300" x2="520" y2="300" stroke="#3f4452" stroke-width="2" />
+
+            <!-- Protractor Inclinometer Arc -->
+            <path id="protractorArc" fill="none" stroke="#474c5c" stroke-width="1.5" stroke-dasharray="4 3" />
+
+            <!-- Protractor Ticks Group (generated by JS) -->
+            <g id="ticksGroup"></g>
+
+            <!-- True Vertical Plumb Line -->
+            <line x1="280" y1="268" x2="280" y2="68" stroke="#64748b" stroke-width="1.5" stroke-dasharray="3 3" />
+
+            <!-- Dynamic Angle Arc -->
+            <path id="dynamicArc" fill="none" stroke="#f59e0b" stroke-width="2.5" />
+
+            <!-- Robot Assembly Rotating Group -->
+            <g id="robotChassis" style="transform-origin: 280px 268px; transform: rotate(0deg); transition: transform 0.08s ease-out;">
+              <!-- Mast Centerline -->
+              <line x1="280" y1="268" x2="280" y2="98" stroke="#6b7280" stroke-width="2.5" stroke-linecap="round" />
+
+              <!-- Chassis Mast Frame -->
+              <rect x="264" y="108" width="32" height="150" rx="4" fill="#181920" stroke="#383c48" stroke-width="1.5" />
+
+              <!-- Structural Cutouts -->
+              <rect x="271" y="123" width="18" height="22" rx="2" fill="#0c0d10" stroke="#252832" stroke-width="1" />
+              <rect x="271" y="158" width="18" height="22" rx="2" fill="#0c0d10" stroke="#252832" stroke-width="1" />
+
+              <!-- Battery Bay -->
+              <rect x="267" y="193" width="26" height="35" rx="2" fill="#1b1c24" stroke="#3a3e4c" stroke-width="1" />
+
+              <!-- Controller Module -->
+              <rect x="268" y="123" width="24" height="28" rx="2" fill="#141720" stroke="#3b82f6" stroke-width="1.2" />
+              <!-- Status LED -->
+              <circle id="robotLed" cx="280" cy="136" r="2.5" fill="#10b981" />
+
+              <!-- Handlebar / Payload Bar -->
+              <line x1="245" y1="98" x2="315" y2="98" stroke="#4b5563" stroke-width="5" stroke-linecap="round" />
+              <circle cx="245" cy="98" r="4" fill="#1f2937" stroke="#9ca3af" stroke-width="1.5" />
+              <circle cx="315" cy="98" r="4" fill="#1f2937" stroke="#9ca3af" stroke-width="1.5" />
+
+              <!-- Center of Mass (CoM) Emblem -->
+              <g transform="translate(280, 157.5)">
+                <circle cx="0" cy="0" r="10" fill="url(#comGlow)" />
+                <circle cx="0" cy="0" r="7" fill="#121318" stroke="#f59e0b" stroke-width="1.5" />
+                <path d="M 0 0 L 7 0 A 7 7 0 0 1 0 7 Z" fill="#f59e0b" />
+                <path d="M 0 0 L -7 0 A 7 7 0 0 1 0 -7 Z" fill="#f59e0b" />
+                <circle cx="0" cy="0" r="1.5" fill="#ffffff" />
+              </g>
+
+              <!-- Wheel Hub -->
+              <circle cx="280" cy="268" r="32" fill="#14151b" stroke="#4a5062" stroke-width="2.5" />
+              <circle cx="280" cy="268" r="26" fill="#0d0e12" stroke="#252834" stroke-width="1" />
+              <line x1="262" y1="268" x2="298" y2="268" stroke="#2b2e3c" stroke-width="1.5" />
+              <line x1="280" y1="250" x2="280" y2="286" stroke="#2b2e3c" stroke-width="1.5" />
+              <line x1="267" y1="255" x2="293" y2="281" stroke="#2b2e3c" stroke-width="1.5" />
+              <line x1="267" y1="281" x2="293" y2="255" stroke="#2b2e3c" stroke-width="1.5" />
+              <circle cx="280" cy="268" r="7" fill="#1f2330" stroke="#4b5563" stroke-width="1.5" />
+              <circle cx="280" cy="268" r="2.5" fill="#9ca3af" />
+
+              <!-- Motor Torque Vector -->
+              <path id="motorTorqueArc" fill="none" stroke="#10b981" stroke-width="2.5" stroke-dasharray="4 2" style="display: none;" />
+            </g>
+
+            <!-- Contact Point -->
+            <circle cx="280" cy="300" r="3" fill="#ffffff" stroke="#000000" stroke-width="1" />
+          </svg>
+        </div>
+
+        <!-- Calibration Toolbar -->
+        <div class="p-2.5 sm:p-3 border-t border-[#22242c] bg-[#111216] flex items-center justify-between text-xs font-mono">
+          <span class="text-zinc-500 text-[11px] hidden sm:inline">Calibration:</span>
+          <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <button id="tareBtn" class="flex-1 sm:flex-initial min-h-[40px] px-3 py-2 rounded bg-[#1c1d25] border border-[#2b2e3b] text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 text-xs">
+              <svg class="w-3.5 h-3.5 text-amber-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="22" y1="12" x2="18" y2="12"/>
+                <line x1="6" y1="12" x2="2" y2="12"/>
+                <line x1="12" y1="6" x2="12" y2="2"/>
+                <line x1="12" y1="22" x2="12" y2="18"/>
+              </svg>
+              <span>Tare Horizon</span>
+            </button>
+            <button id="resetBtn" class="flex-1 sm:flex-initial min-h-[40px] px-3 py-2 rounded bg-[#1c1d25] border border-[#2b2e3b] text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 text-xs">
+              <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              <span>Reset Upright</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Right: Motor Controls, PID Tuning, Packet Log -->
+    <div class="lg:col-span-5 flex flex-col gap-4 sm:gap-6">
+      
+      <!-- Motor Controls -->
+      <div class="bg-[#141519] border border-[#22242c] rounded flex flex-col">
+        <div class="px-4 sm:px-5 py-3 border-b border-[#22242c] flex items-center justify-between">
+          <span class="text-xs sm:text-sm font-mono font-semibold tracking-wide text-zinc-200">
+            Motor Controls
+          </span>
+          <span id="motorStateSubtext" class="text-[11px] font-mono text-zinc-500">
+            MOTORS ENABLED
+          </span>
+        </div>
+
+        <div class="p-3.5 sm:p-4 flex flex-col gap-2.5 sm:gap-3">
+          <div class="grid grid-cols-2 gap-2 sm:gap-3">
+            <button id="enableMotorBtn" class="min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-emerald-950/60 border-emerald-700 text-emerald-300">
+              <svg class="w-3.5 h-3.5 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3"/>
+              </svg>
+              <span>Enable</span>
+            </button>
+
+            <button id="disableMotorBtn" class="min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-[#1b1c24] border-[#292c37] text-zinc-300 hover:bg-[#222530] hover:text-white">
+              <svg class="w-3.5 h-3.5 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16"/>
+                <rect x="14" y="4" width="4" height="16"/>
+              </svg>
+              <span>Disable</span>
+            </button>
+          </div>
+
+          <!-- Emergency Stop -->
+          <button id="estopBtn" class="min-h-[48px] py-3 px-4 rounded border font-mono text-xs font-bold tracking-wide flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] bg-[#221317] hover:bg-[#2e161c] border-rose-900/80 text-rose-300 hover:border-rose-600 hover:text-white">
+            <svg class="w-4 h-4 text-rose-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/>
+            </svg>
+            <span id="estopBtnText">Emergency Stop</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PID Tuning -->
+      <div class="bg-[#141519] border border-[#22242c] rounded flex flex-col h-full">
+        <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-[#22242c] flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"/>
+              <line x1="4" y1="10" x2="4" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12" y2="3"/>
+              <line x1="20" y1="21" x2="20" y2="16"/>
+              <line x1="20" y1="12" x2="20" y2="3"/>
+              <line x1="1" y1="14" x2="7" y2="14"/>
+              <line x1="9" y1="8" x2="15" y2="8"/>
+              <line x1="17" y1="16" x2="23" y2="16"/>
+            </svg>
+            <span class="text-xs sm:text-sm font-mono font-semibold tracking-wide text-zinc-200">
+              PID Tuning
+            </span>
+          </div>
+        </div>
+
+        <div class="p-3.5 sm:p-5 flex-1 flex flex-col gap-3.5 sm:gap-4">
+          <!-- Kp -->
+          <div class="bg-[#111216] border border-[#22242c] p-3 rounded flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-medium text-zinc-200">Proportional (Kp)</span>
+              <span id="kpValText" class="text-sm font-mono font-bold text-zinc-100 tabular-nums">25.5</span>
+            </div>
+            <input type="range" id="kpSlider" min="0" max="100" step="0.5" value="25.5" class="w-full accent-zinc-300 bg-[#222530] rounded-sm appearance-none h-2 cursor-pointer">
+          </div>
+
+          <!-- Ki -->
+          <div class="bg-[#111216] border border-[#22242c] p-3 rounded flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-medium text-zinc-200">Integral (Ki)</span>
+              <span id="kiValText" class="text-sm font-mono font-bold text-zinc-100 tabular-nums">1.20</span>
+            </div>
+            <input type="range" id="kiSlider" min="0" max="10" step="0.05" value="1.2" class="w-full accent-zinc-300 bg-[#222530] rounded-sm appearance-none h-2 cursor-pointer">
+          </div>
+
+          <!-- Kd -->
+          <div class="bg-[#111216] border border-[#22242c] p-3 rounded flex flex-col gap-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-mono font-medium text-zinc-200">Derivative (Kd)</span>
+              <span id="kdValText" class="text-sm font-mono font-bold text-zinc-100 tabular-nums">1.85</span>
+            </div>
+            <input type="range" id="kdSlider" min="0" max="10" step="0.05" value="1.85" class="w-full accent-zinc-300 bg-[#222530] rounded-sm appearance-none h-2 cursor-pointer">
+          </div>
+
+          <!-- Apply Button -->
+          <div class="mt-auto pt-2">
+            <button id="applyPidBtn" class="min-h-[44px] w-full py-2.5 sm:py-3 px-4 rounded text-xs sm:text-sm font-mono font-bold transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] bg-zinc-200 hover:bg-white text-zinc-950 border border-white">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+              <span>Apply PID to Robot</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Packet Log -->
+      <div class="bg-[#141519] border border-[#22242c] rounded flex flex-col h-full">
+        <div class="px-5 py-3 border-b border-[#22242c] flex items-center justify-between text-xs font-mono">
+          <div class="flex items-center gap-2">
+            <svg class="w-4 h-4 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 17 10 11 4 5"/>
+              <line x1="12" y1="19" x2="20" y2="19"/>
+            </svg>
+            <span class="font-semibold text-zinc-200">Packet Log</span>
+          </div>
+          <button id="clearLogBtn" class="px-2 py-1 rounded bg-[#1b1c24] border border-[#282a35] text-zinc-400 hover:text-zinc-200 transition-colors text-[11px]" title="Clear log">
+            <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            </svg>
+          </button>
+        </div>
+
+        <div id="logViewport" class="flex-1 min-h-[140px] max-h-[180px] sm:max-h-[220px] bg-[#0c0d10] p-3 overflow-y-auto font-mono text-[11px] leading-relaxed flex flex-col gap-1 border-b border-[#22242c]">
+          <div class="text-zinc-600 italic py-4 text-center">[Waiting for packets...]</div>
+        </div>
+
+        <form id="cmdForm" class="p-2.5 bg-[#111216] flex items-center gap-2">
+          <input type="text" id="cmdInput" placeholder="Send command (e.g. CMD:ENABLE)..." class="flex-1 min-h-[40px] bg-[#181920] border border-[#2c2f3b] rounded px-3 py-2 font-mono text-xs text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500">
+          <button type="submit" class="min-h-[40px] px-3.5 py-2 bg-zinc-200 hover:bg-white text-zinc-950 font-mono text-xs font-semibold rounded transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            <span>Send</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+
+    <!-- Bottom: Angle History Graph -->
+    <div class="lg:col-span-12 flex flex-col">
+      <div id="graphCard" class="bg-[#141519] border border-[#22242c] rounded flex flex-col transition-colors">
+        <!-- Graph Header -->
+        <div class="px-4 sm:px-5 py-2.5 sm:py-3 border-b border-[#22242c] flex flex-wrap items-center justify-between gap-2.5 text-xs font-mono">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <svg class="w-4 h-4 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 3v18h18"/>
+              <path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            <span class="text-xs sm:text-sm font-semibold text-zinc-200 tracking-wide">
+              Angle History
+            </span>
+
+            <!-- Live REC Status Badge (Shown while recording) -->
+            <div id="recBadge" class="hidden items-center gap-1.5 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[10px] font-mono font-semibold">
+              <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
+              <span>REC</span>
+              <span id="recTimerText" class="text-rose-200 font-bold tabular-nums">00:00.0</span>
+              <span class="text-rose-500/50">·</span>
+              <span id="recLiveSampleText" class="text-rose-300 tabular-nums">0 pts</span>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <div class="hidden sm:flex items-center gap-3 text-zinc-400 text-[11px]">
+              <span>Min: <span id="graphMinText" class="text-zinc-200 tabular-nums">0.00°</span></span>
+              <span>·</span>
+              <span>Max: <span id="graphMaxText" class="text-zinc-200 tabular-nums">0.00°</span></span>
+            </div>
+
+            <!-- Start / Stop Recording Button -->
+            <button id="recordToggleBtn" class="px-2.5 py-1 rounded bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 text-rose-300 hover:text-white transition-all text-[11px] font-mono flex items-center gap-1.5 cursor-pointer active:scale-95" title="Record angular telemetry data">
+              <span id="recordBtnIcon" class="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+              <span id="recordBtnText">Record</span>
+            </button>
+
+            <!-- Clear Graph History Button -->
+            <button id="clearGraphBtn" class="px-2.5 py-1 rounded bg-[#1b1c24] border border-[#282a35] text-zinc-400 hover:text-zinc-200 transition-colors text-[11px] flex items-center gap-1 cursor-pointer" title="Clear angle history">
+              <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              <span>Clear</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Session Download & Review Bar (Displayed when recording completes) -->
+        <div id="recSummaryBanner" class="hidden px-4 sm:px-5 py-2.5 bg-[#161821] border-b border-[#292c3a] flex flex-wrap items-center justify-between gap-3 text-xs font-mono">
+          <div class="flex items-center gap-2 text-zinc-300">
+            <svg class="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            <span>Session recorded: <strong id="summarySampleCount" class="text-white font-bold">0</strong> samples in <strong id="summaryDuration" class="text-white font-bold">0.0s</strong></span>
+            <span class="hidden md:inline text-zinc-500 text-[11px]">(Timestamp, Angle, Rate, Motor PWM)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="downloadCsvBtn" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold transition-colors flex items-center gap-1.5 cursor-pointer text-[11px] shadow-sm active:scale-95">
+              <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span>Download CSV</span>
+            </button>
+            <button id="downloadJsonBtn" class="px-2.5 py-1 rounded bg-[#22242e] hover:bg-[#2c2f3d] border border-[#353949] text-zinc-300 hover:text-white transition-colors flex items-center gap-1 cursor-pointer text-[11px] active:scale-95">
+              <span>JSON</span>
+            </button>
+            <button id="dismissSummaryBtn" class="px-2 py-1 text-zinc-400 hover:text-zinc-200 transition-colors text-[11px] cursor-pointer ml-1" title="Dismiss summary">
+              ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- Graph Canvas Area -->
+        <div class="relative w-full h-44 sm:h-52 bg-[#0c0d10] overflow-hidden">
+          <canvas id="angleHistoryCanvas" class="w-full h-full block cursor-crosshair"></canvas>
+
+          <!-- Hover Probe HUD -->
+          <div id="graphTooltip" class="hidden absolute top-2 right-3 bg-[#141519]/90 border border-[#2b2e3a] rounded px-2.5 py-1 text-[11px] font-mono text-zinc-200 pointer-events-none shadow-md backdrop-blur">
+            <span class="text-zinc-400" id="tooltipTime">--</span>: <span class="font-bold text-amber-400" id="tooltipAngle">0.00°</span>
+          </div>
+        </div>
+
+        <!-- Graph Footer Legend -->
+        <div class="px-4 py-2 border-t border-[#22242c] bg-[#111216] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+          <div>Range: ±30.0° Full-Scale · Center: 0.00° Datum</div>
+          <div id="historyCountText">0 samples</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Complete Vanilla JavaScript Engine -->
+  <script>
+    // Bluetooth Constants matching the ESP32 firmware
+    const SERVICE_UUID = "4fafc201-1fb5-459e-8fcc-c5c9c331914b";
+    const CHARACTERISTIC_UUID = "beb5483e-36e1-4688-b7f5-ea07361b26a8";
+
+    // Application State
+    let bluetoothDevice = null;
+    let bleCharacteristic = null;
+    let isConnected = false;
+    let currentAngle = 0.0;
+    let gyroRate = 0.0;
+    let motorPwm = 0;
+    let isMotorsEnabled = true;
+    let isEstop = false;
+    let lastAngleTime = Date.now();
+
+    // DOM Elements
+    const connectBtn = document.getElementById('connectBtn');
+    const connectBtnText = document.getElementById('connectBtnText');
+    const telemetryAngle = document.getElementById('telemetryAngle');
+    const telemetryRate = document.getElementById('telemetryRate');
+    const telemetryMotor = document.getElementById('telemetryMotor');
+    const telemetryStatus = document.getElementById('telemetryStatus');
+    const liveAngleText = document.getElementById('liveAngleText');
+    const robotChassis = document.getElementById('robotChassis');
+    const robotLed = document.getElementById('robotLed');
+    const motorTorqueArc = document.getElementById('motorTorqueArc');
+    const dynamicArc = document.getElementById('dynamicArc');
+    const alertBanner = document.getElementById('alertBanner');
+    const alertText = document.getElementById('alertText');
+    const alertIcon = document.getElementById('alertIcon');
+    const alertClose = document.getElementById('alertClose');
+    const enableMotorBtn = document.getElementById('enableMotorBtn');
+    const disableMotorBtn = document.getElementById('disableMotorBtn');
+    const estopBtn = document.getElementById('estopBtn');
+    const estopBtnText = document.getElementById('estopBtnText');
+    const motorStateSubtext = document.getElementById('motorStateSubtext');
+    const kpSlider = document.getElementById('kpSlider');
+    const kiSlider = document.getElementById('kiSlider');
+    const kdSlider = document.getElementById('kdSlider');
+    const kpValText = document.getElementById('kpValText');
+    const kiValText = document.getElementById('kiValText');
+    const kdValText = document.getElementById('kdValText');
+    const applyPidBtn = document.getElementById('applyPidBtn');
+    const tareBtn = document.getElementById('tareBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const logViewport = document.getElementById('logViewport');
+    const clearLogBtn = document.getElementById('clearLogBtn');
+    const ticksGroup = document.getElementById('ticksGroup');
+    const protractorArc = document.getElementById('protractorArc');
+    const graphCard = document.getElementById('graphCard');
+    const angleHistoryCanvas = document.getElementById('angleHistoryCanvas');
+    const graphMinText = document.getElementById('graphMinText');
+    const graphMaxText = document.getElementById('graphMaxText');
+    const clearGraphBtn = document.getElementById('clearGraphBtn');
+    const historyCountText = document.getElementById('historyCountText');
+    const graphTooltip = document.getElementById('graphTooltip');
+    const tooltipTime = document.getElementById('tooltipTime');
+    const tooltipAngle = document.getElementById('tooltipAngle');
+    const recordToggleBtn = document.getElementById('recordToggleBtn');
+    const recordBtnIcon = document.getElementById('recordBtnIcon');
+    const recordBtnText = document.getElementById('recordBtnText');
+    const recBadge = document.getElementById('recBadge');
+    const recTimerText = document.getElementById('recTimerText');
+    const recLiveSampleText = document.getElementById('recLiveSampleText');
+    const recSummaryBanner = document.getElementById('recSummaryBanner');
+    const summarySampleCount = document.getElementById('summarySampleCount');
+    const summaryDuration = document.getElementById('summaryDuration');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const dismissSummaryBtn = document.getElementById('dismissSummaryBtn');
+
+    // Dedicated Telemetry Session Recorder State
+    let isRecording = false;
+    let recordingStartTime = 0;
+    let recordingTimerId = null;
+    let recordedSession = []; // { timestampIso, elapsedMs, angle, rate, pwm }
+    let lastRecordSampleTime = 0;
+
+    function startRecording() {
+      isRecording = true;
+      recordingStartTime = performance.now();
+      recordedSession = [];
+      if (recSummaryBanner) recSummaryBanner.classList.add('hidden');
+
+      if (graphCard) {
+        graphCard.classList.add('border-rose-900/60', 'ring-1', 'ring-rose-500/20');
+      }
+      if (recBadge) {
+        recBadge.classList.remove('hidden');
+        recBadge.classList.add('flex');
+      }
+      if (recordBtnText) recordBtnText.textContent = 'Stop';
+      if (recordBtnIcon) {
+        recordBtnIcon.className = 'w-2 h-2 bg-rose-500 rounded-none inline-block';
+      }
+      if (recordToggleBtn) {
+        recordToggleBtn.className = 'px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-semibold transition-all text-[11px] font-mono flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95';
+      }
+
+      // Capture initial baseline sample
+      captureTelemetrySample(currentAngle, true);
+
+      // Live Session Timer & Periodic Steady-State Logger
+      if (recordingTimerId) clearInterval(recordingTimerId);
+      recordingTimerId = setInterval(() => {
+        if (!isRecording) return;
+        // Continuous periodic sample capture if no new BLE packet arrived (e.g. stationary robot)
+        if (performance.now() - lastRecordSampleTime >= 45) {
+          captureTelemetrySample(currentAngle, true);
+        }
+        const elapsedSec = (performance.now() - recordingStartTime) / 1000;
+        const mins = Math.floor(elapsedSec / 60);
+        const secs = (elapsedSec % 60).toFixed(1);
+        if (recTimerText) {
+          recTimerText.textContent = `${String(mins).padStart(2, '0')}:${secs < 10 ? '0' : ''}${secs}`;
+        }
+        if (recLiveSampleText) {
+          recLiveSampleText.textContent = `${recordedSession.length} pts`;
+        }
+      }, 50);
+
+      showBanner('Telemetry recording started. Capturing Angle, Rate, and Motor PWM.', 'info');
+      logPacket('sys', 'Recording started (CSV buffer active)');
+    }
+
+    function stopRecording() {
+      if (!isRecording) return;
+      isRecording = false;
+      const totalElapsedMs = Math.round(performance.now() - recordingStartTime);
+      const totalSec = (totalElapsedMs / 1000).toFixed(1);
+
+      if (recordingTimerId) {
+        clearInterval(recordingTimerId);
+        recordingTimerId = null;
+      }
+
+      if (graphCard) {
+        graphCard.classList.remove('border-rose-900/60', 'ring-1', 'ring-rose-500/20');
+      }
+      if (recBadge) {
+        recBadge.classList.add('hidden');
+        recBadge.classList.remove('flex');
+      }
+      if (recordBtnText) recordBtnText.textContent = 'Record';
+      if (recordBtnIcon) {
+        recordBtnIcon.className = 'w-2 h-2 rounded-full bg-rose-500 inline-block';
+      }
+      if (recordToggleBtn) {
+        recordToggleBtn.className = 'px-2.5 py-1 rounded bg-rose-950/40 hover:bg-rose-900/50 border border-rose-800/60 text-rose-300 hover:text-white transition-all text-[11px] font-mono flex items-center gap-1.5 cursor-pointer active:scale-95';
+      }
+
+      // Present review and download summary
+      if (summarySampleCount) summarySampleCount.textContent = recordedSession.length;
+      if (summaryDuration) summaryDuration.textContent = `${totalSec}s`;
+      if (recSummaryBanner) recSummaryBanner.classList.remove('hidden');
+
+      showBanner(`Recording finished: ${recordedSession.length} samples in ${totalSec}s. Click Download CSV to save.`, 'success');
+      logPacket('sys', `Recording stopped: ${recordedSession.length} samples (${totalSec}s)`);
+    }
+
+    function captureTelemetrySample(angle, force = false) {
+      if (!isRecording) return;
+      const now = performance.now();
+      // Throttle capture to ~35Hz to maintain high fidelity without redundant spikes
+      if (!force && (now - lastRecordSampleTime < 28)) {
+        return;
+      }
+      lastRecordSampleTime = now;
+      const elapsedMs = Math.round(now - recordingStartTime);
+      recordedSession.push({
+        timestampIso: new Date().toISOString(),
+        elapsedMs: elapsedMs,
+        angle: Number(angle.toFixed(2)),
+        rate: Number(gyroRate.toFixed(1)),
+        pwm: Number(motorPwm)
+      });
+      if (recLiveSampleText) {
+        recLiveSampleText.textContent = `${recordedSession.length} pts`;
+      }
+    }
+
+    function pad2(n) {
+      return String(n).padStart(2, '0');
+    }
+
+    function getTelemetryFilename(ext) {
+      const d = new Date();
+      const dateStr = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+      const timeStr = `${pad2(d.getHours())}${pad2(d.getMinutes())}${pad2(d.getSeconds())}`;
+      return `robot_telemetry_${dateStr}_${timeStr}.${ext}`;
+    }
+
+    function downloadFile(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    function exportToCSV() {
+      if (!recordedSession || recordedSession.length === 0) {
+        showBanner('No telemetry samples to download.', 'error');
+        return;
+      }
+      // Professional RFC 4180 compliant CSV header with standard telemetry fields
+      const header = 'timestamp_iso,elapsed_ms,pitch_angle_deg,angular_rate_dps,motor_pwm\r\n';
+      const rows = recordedSession.map(s => 
+        `${s.timestampIso},${s.elapsedMs},${s.angle.toFixed(2)},${s.rate.toFixed(1)},${s.pwm}`
+      ).join('\r\n');
+      const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+      downloadFile(blob, getTelemetryFilename('csv'));
+      showBanner(`Saved ${recordedSession.length} samples to CSV file.`, 'success');
+      logPacket('sys', `Exported CSV (${recordedSession.length} samples)`);
+    }
+
+    function exportToJSON() {
+      if (!recordedSession || recordedSession.length === 0) {
+        showBanner('No telemetry samples to download.', 'error');
+        return;
+      }
+      const payload = {
+        app: 'Robot Testbench',
+        device: (bluetoothDevice && bluetoothDevice.name) ? bluetoothDevice.name : 'Robot',
+        exported_at: new Date().toISOString(),
+        total_samples: recordedSession.length,
+        duration_ms: recordedSession.length > 0 ? recordedSession[recordedSession.length - 1].elapsedMs : 0,
+        fields: ['timestamp_iso', 'elapsed_ms', 'pitch_angle_deg', 'angular_rate_dps', 'motor_pwm'],
+        samples: recordedSession
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8;' });
+      downloadFile(blob, getTelemetryFilename('json'));
+      showBanner(`Saved ${recordedSession.length} samples to JSON file.`, 'success');
+      logPacket('sys', `Exported JSON (${recordedSession.length} samples)`);
+    }
+
+    // Angle History Buffer & State
+    const angleHistory = [];
+    const MAX_HISTORY = 180;
+    let hoverIndex = null;
+    let lastRecordTime = 0;
+
+    function recordAnglePoint(angle, force = false) {
+      const now = Date.now();
+      // Throttle recording slightly to ~25Hz max unless forced, ensuring smooth high-performance render
+      if (!force && (now - lastRecordTime < 35)) {
+        return;
+      }
+      lastRecordTime = now;
+      const timeStr = new Date(now).toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      angleHistory.push({ time: now, timeStr, angle });
+      if (angleHistory.length > MAX_HISTORY) {
+        angleHistory.shift();
+      }
+      if (historyCountText) {
+        historyCountText.textContent = `${angleHistory.length} samples`;
+      }
+      updateMinMax();
+      drawAngleHistory();
+    }
+
+    function updateMinMax() {
+      if (angleHistory.length === 0) {
+        if (graphMinText) graphMinText.textContent = '0.00°';
+        if (graphMaxText) graphMaxText.textContent = '0.00°';
+        return;
+      }
+      let min = Infinity;
+      let max = -Infinity;
+      for (let i = 0; i < angleHistory.length; i++) {
+        const a = angleHistory[i].angle;
+        if (a < min) min = a;
+        if (a > max) max = a;
+      }
+      if (graphMinText) graphMinText.textContent = `${min >= 0 ? '+' : ''}${min.toFixed(2)}°`;
+      if (graphMaxText) graphMaxText.textContent = `${max >= 0 ? '+' : ''}${max.toFixed(2)}°`;
+    }
+
+    // High-Precision Angle History Canvas Renderer
+    function drawAngleHistory() {
+      if (!angleHistoryCanvas) return;
+      const canvas = angleHistoryCanvas;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const rect = canvas.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(300, rect.width || canvas.clientWidth || 300);
+      const height = Math.max(160, rect.height || canvas.clientHeight || 160);
+
+      const targetPxWidth = Math.round(width * dpr);
+      const targetPxHeight = Math.round(height * dpr);
+
+      if (canvas.width !== targetPxWidth || canvas.height !== targetPxHeight) {
+        canvas.width = targetPxWidth;
+        canvas.height = targetPxHeight;
+      }
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(dpr, dpr);
+
+      // Matte dark canvas background
+      ctx.fillStyle = '#0c0d10';
+      ctx.fillRect(0, 0, width, height);
+
+      const marginLeft = 48;
+      const marginRight = 16;
+      const marginTop = 18;
+      const marginBottom = 22;
+      const plotWidth = width - marginLeft - marginRight;
+      const plotHeight = height - marginTop - marginBottom;
+      const centerY = marginTop + plotHeight / 2;
+
+      // Full-scale vertical range: ±30 degrees
+      const scaleDeg = 30;
+
+      // Horizontal Datum & Reference Grid Lines
+      const gridAngles = [30, 20, 10, 0, -10, -20, -30];
+      ctx.font = '10px "JetBrains Mono", monospace';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+
+      gridAngles.forEach((deg) => {
+        const y = centerY - (deg / scaleDeg) * (plotHeight / 2);
+
+        ctx.beginPath();
+        if (deg === 0) {
+          ctx.strokeStyle = '#383d4e';
+          ctx.lineWidth = 1.25;
+          ctx.setLineDash([]);
+          ctx.fillStyle = '#cbd5e1';
+        } else {
+          ctx.strokeStyle = '#1d202b';
+          ctx.lineWidth = 1;
+          ctx.setLineDash([4, 4]);
+          ctx.fillStyle = '#64748b';
+        }
+        ctx.moveTo(marginLeft, y);
+        ctx.lineTo(marginLeft + plotWidth, y);
+        ctx.stroke();
+
+        const label = (deg > 0 ? '+' : '') + deg + '°';
+        ctx.fillText(label, marginLeft - 8, y);
+      });
+      ctx.setLineDash([]);
+
+      // Empty state
+      if (angleHistory.length === 0) {
+        ctx.fillStyle = '#525866';
+        ctx.textAlign = 'center';
+        ctx.font = '11px "JetBrains Mono", monospace';
+        ctx.fillText('Awaiting angle telemetry data...', marginLeft + plotWidth / 2, centerY);
+        return;
+      }
+
+      // Calculate sample positions (streaming right-to-left strip chart)
+      const total = angleHistory.length;
+      const maxSpan = Math.max(MAX_HISTORY - 1, 1);
+      const stepX = plotWidth / maxSpan;
+
+      const points = [];
+      for (let i = 0; i < total; i++) {
+        const offsetFromLatest = (total - 1) - i;
+        const x = (marginLeft + plotWidth) - offsetFromLatest * stepX;
+        const deg = angleHistory[i].angle;
+        const clampedDeg = Math.max(-scaleDeg, Math.min(scaleDeg, deg));
+        const y = centerY - (clampedDeg / scaleDeg) * (plotHeight / 2);
+        points.push({ x, y, deg, timeStr: angleHistory[i].timeStr });
+      }
+
+      // Shaded area fill toward zero center line
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, centerY);
+      for (let i = 0; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+      }
+      ctx.lineTo(points[points.length - 1].x, centerY);
+      ctx.closePath();
+
+      const areaGrad = ctx.createLinearGradient(0, marginTop, 0, height - marginBottom);
+      areaGrad.addColorStop(0, 'rgba(245, 158, 11, 0.20)');
+      areaGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.03)');
+      areaGrad.addColorStop(1, 'rgba(245, 158, 11, 0.20)');
+      ctx.fillStyle = areaGrad;
+      ctx.fill();
+
+      // Line trace
+      ctx.beginPath();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      for (let i = 0; i < points.length; i++) {
+        if (i === 0) {
+          ctx.moveTo(points[i].x, points[i].y);
+        } else {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+      }
+      ctx.stroke();
+
+      // Current head pip (leading sample)
+      const head = points[points.length - 1];
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 4, 0, Math.PI * 2);
+      ctx.fillStyle = Math.abs(head.deg) > 20 ? '#f43f5e' : '#f59e0b';
+      ctx.fill();
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+
+      // Hover crosshair and sample HUD point
+      if (hoverIndex !== null && hoverIndex >= 0 && hoverIndex < points.length) {
+        const hp = points[hoverIndex];
+        ctx.beginPath();
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 3]);
+        ctx.moveTo(hp.x, marginTop);
+        ctx.lineTo(hp.x, height - marginBottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        ctx.beginPath();
+        ctx.arc(hp.x, hp.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#f59e0b';
+        ctx.stroke();
+      }
+    }
+
+    // Graph Hover & Cursor Scrubbing
+    function handleGraphHover(e) {
+      if (angleHistory.length === 0 || !angleHistoryCanvas) return;
+      const rect = angleHistoryCanvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const width = rect.width;
+      const marginLeft = 48;
+      const marginRight = 16;
+      const plotWidth = width - marginLeft - marginRight;
+
+      if (x < marginLeft || x > marginLeft + plotWidth) {
+        hoverIndex = null;
+        if (graphTooltip) graphTooltip.classList.add('hidden');
+        drawAngleHistory();
+        return;
+      }
+
+      const total = angleHistory.length;
+      const maxSpan = Math.max(MAX_HISTORY - 1, 1);
+      const stepX = plotWidth / maxSpan;
+
+      let closest = 0;
+      let minDiff = Infinity;
+      for (let i = 0; i < total; i++) {
+        const offset = (total - 1) - i;
+        const ptX = (marginLeft + plotWidth) - offset * stepX;
+        const diff = Math.abs(ptX - x);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closest = i;
+        }
+      }
+
+      hoverIndex = closest;
+      const sample = angleHistory[closest];
+      if (tooltipTime) tooltipTime.textContent = sample.timeStr;
+      if (tooltipAngle) {
+        tooltipAngle.textContent = (sample.angle >= 0 ? '+' : '') + sample.angle.toFixed(2) + '°';
+        tooltipAngle.className = Math.abs(sample.angle) > 20 ? 'font-bold text-rose-400' : 'font-bold text-amber-400';
+      }
+      if (graphTooltip) graphTooltip.classList.remove('hidden');
+      drawAngleHistory();
+    }
+
+    if (angleHistoryCanvas) {
+      angleHistoryCanvas.addEventListener('mousemove', handleGraphHover);
+      angleHistoryCanvas.addEventListener('mouseleave', () => {
+        hoverIndex = null;
+        if (graphTooltip) graphTooltip.classList.add('hidden');
+        drawAngleHistory();
+      });
+      angleHistoryCanvas.addEventListener('touchmove', (e) => {
+        if (e.touches && e.touches[0]) {
+          handleGraphHover(e.touches[0]);
+        }
+      }, { passive: true });
+      angleHistoryCanvas.addEventListener('touchend', () => {
+        hoverIndex = null;
+        if (graphTooltip) graphTooltip.classList.add('hidden');
+        drawAngleHistory();
+      });
+    }
+
+    // Record Toggle Action (Start / Stop)
+    if (recordToggleBtn) {
+      recordToggleBtn.addEventListener('click', () => {
+        if (isRecording) {
+          stopRecording();
+        } else {
+          startRecording();
+        }
+      });
+    }
+
+    // Export Actions
+    if (downloadCsvBtn) {
+      downloadCsvBtn.addEventListener('click', exportToCSV);
+    }
+    if (downloadJsonBtn) {
+      downloadJsonBtn.addEventListener('click', exportToJSON);
+    }
+    if (dismissSummaryBtn) {
+      dismissSummaryBtn.addEventListener('click', () => {
+        if (recSummaryBanner) recSummaryBanner.classList.add('hidden');
+      });
+    }
+
+    // Clear Graph Action
+    if (clearGraphBtn) {
+      clearGraphBtn.addEventListener('click', () => {
+        angleHistory.length = 0;
+        hoverIndex = null;
+        if (graphTooltip) graphTooltip.classList.add('hidden');
+        if (historyCountText) historyCountText.textContent = '0 samples';
+        updateMinMax();
+        drawAngleHistory();
+      });
+    }
+
+    // 1. Draw High-Contrast Protractor Arc & Ticks
+    const pivotX = 280;
+    const wheelCenterY = 268;
+    const arcRadius = 210;
+
+    const arcStartRad = (-45 * Math.PI) / 180;
+    const arcEndRad = (45 * Math.PI) / 180;
+    const xStart = pivotX + arcRadius * Math.sin(arcStartRad);
+    const yStart = wheelCenterY - arcRadius * Math.cos(arcStartRad);
+    const xEnd = pivotX + arcRadius * Math.sin(arcEndRad);
+    const yEnd = wheelCenterY - arcRadius * Math.cos(arcEndRad);
+    protractorArc.setAttribute('d', `M ${xStart} ${yStart} A ${arcRadius} ${arcRadius} 0 0 1 ${xEnd} ${yEnd}`);
+
+    let ticksHtml = '';
+    for (let deg = -45; deg <= 45; deg += 5) {
+      const isMajor = deg % 15 === 0;
+      const isZero = deg === 0;
+      const r1 = isMajor ? arcRadius - 16 : arcRadius - 9;
+      const rad = (deg * Math.PI) / 180;
+      const x1 = pivotX + r1 * Math.sin(rad);
+      const y1 = wheelCenterY - r1 * Math.cos(rad);
+      const x2 = pivotX + arcRadius * Math.sin(rad);
+      const y2 = wheelCenterY - arcRadius * Math.cos(rad);
+
+      const stroke = isZero ? '#e2e8f0' : isMajor ? '#cbd5e1' : '#64748b';
+      const strokeW = isZero ? 2 : isMajor ? 1.75 : 1.2;
+
+      ticksHtml += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${strokeW}" />`;
+
+      if (isMajor) {
+        const labelR = arcRadius + 18;
+        const lx = pivotX + labelR * Math.sin(rad);
+        const ly = wheelCenterY - labelR * Math.cos(rad);
+        const fill = isZero ? '#f8fafc' : '#cbd5e1';
+        const fw = isZero ? '700' : '500';
+        const label = deg === 0 ? '0°' : (deg > 0 ? '+' : '') + deg + '°';
+        ticksHtml += `<text x="${lx}" y="${ly + 3}" text-anchor="middle" fill="${fill}" font-size="11" font-weight="${fw}" font-family="monospace">${label}</text>`;
+      }
+    }
+    ticksGroup.innerHTML = ticksHtml;
+
+    // 2. Banner Notification
+    function showBanner(msg, type = 'info') {
+      alertBanner.classList.remove('hidden');
+      alertText.textContent = msg;
+      if (type === 'error') {
+        alertText.className = 'text-rose-300';
+      } else if (type === 'success') {
+        alertText.className = 'text-emerald-300';
+      } else {
+        alertText.className = 'text-zinc-300';
+      }
+    }
+    alertClose.addEventListener('click', () => alertBanner.classList.add('hidden'));
+
+    // 3. Serial Packet Logger
+    let hasLoggedPackets = false;
+    function logPacket(type, text) {
+      if (!hasLoggedPackets) {
+        logViewport.innerHTML = '';
+        hasLoggedPackets = true;
+      }
+      const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const entry = document.createElement('div');
+      entry.className = 'flex items-start gap-2 text-zinc-400';
+      
+      const badgeColor = type === 'rx' ? 'text-cyan-400' : type === 'tx' ? 'text-emerald-400' : 'text-zinc-400';
+      entry.innerHTML = `<span class="text-zinc-600 select-none shrink-0">[${time}]</span><span class="uppercase font-semibold select-none shrink-0 text-[10px] ${badgeColor}">${type}:</span><span class="break-all text-zinc-300">${text}</span>`;
+      
+      logViewport.appendChild(entry);
+      logViewport.scrollTop = logViewport.scrollHeight;
+
+      while (logViewport.children.length > 80) {
+        logViewport.removeChild(logViewport.firstChild);
+      }
+    }
+    clearLogBtn.addEventListener('click', () => {
+      logViewport.innerHTML = '<div class="text-zinc-600 italic py-4 text-center">[Log cleared]</div>';
+      hasLoggedPackets = false;
+    });
+
+    // 4. Update Visualizer Graphic & Telemetry
+    function updateRobotPose(angleDeg) {
+      currentAngle = angleDeg;
+      const clamped = Math.max(-65, Math.min(65, angleDeg));
+      
+      // Rotate Robot assembly
+      robotChassis.style.transform = `rotate(${clamped}deg)`;
+
+      // Dynamic angle arc
+      if (Math.abs(clamped) > 0.5) {
+        const rad = (clamped * Math.PI) / 180;
+        const arcY = wheelCenterY - 70;
+        const targetX = pivotX + 70 * Math.sin(rad);
+        const targetY = wheelCenterY - 70 * Math.cos(rad);
+        const sweep = clamped > 0 ? 1 : 0;
+        dynamicArc.setAttribute('d', `M ${pivotX} ${arcY} A 70 70 0 0 ${sweep} ${targetX} ${targetY}`);
+        dynamicArc.setAttribute('stroke', Math.abs(clamped) > 20 ? '#f43f5e' : '#f59e0b');
+      } else {
+        dynamicArc.setAttribute('d', '');
+      }
+
+      // Live Angle text
+      const formatted = (angleDeg >= 0 ? '+' : '') + angleDeg.toFixed(2) + '°';
+      liveAngleText.textContent = formatted;
+      telemetryAngle.textContent = (angleDeg >= 0 ? '+' : '') + angleDeg.toFixed(2);
+
+      // Warning color
+      if (Math.abs(angleDeg) > 20) {
+        liveAngleText.className = 'font-semibold tabular-nums text-rose-400';
+        telemetryAngle.className = 'text-xl sm:text-2xl font-mono font-bold tabular-nums text-rose-400';
+      } else if (Math.abs(angleDeg) > 5) {
+        liveAngleText.className = 'font-semibold tabular-nums text-amber-400';
+        telemetryAngle.className = 'text-xl sm:text-2xl font-mono font-bold tabular-nums text-amber-400';
+      } else {
+        liveAngleText.className = 'font-semibold tabular-nums text-zinc-100';
+        telemetryAngle.className = 'text-xl sm:text-2xl font-mono font-bold tabular-nums text-zinc-100';
+      }
+
+      // Record telemetry in angle history buffer & session recorder
+      recordAnglePoint(angleDeg);
+      captureTelemetrySample(angleDeg);
+    }
+
+    // 5. Send Command Helper
+    async function sendCommand(cmd) {
+      logPacket('tx', cmd);
+      if (isConnected && bleCharacteristic) {
+        try {
+          const encoder = new TextEncoder();
+          await bleCharacteristic.writeValue(encoder.encode(cmd));
+        } catch (err) {
+          console.error('BLE write error:', err);
+          showBanner('Failed to send command: ' + err.message, 'error');
+        }
+      } else {
+        // Local state preview if disconnected
+        if (cmd === 'CMD:ENABLE') {
+          isMotorsEnabled = true;
+          isEstop = false;
+          updateMotorUI();
+        } else if (cmd === 'CMD:DISABLE') {
+          isMotorsEnabled = false;
+          updateMotorUI();
+        } else if (cmd === 'CMD:ESTOP') {
+          isEstop = true;
+          isMotorsEnabled = false;
+          updateMotorUI();
+        }
+      }
+    }
+
+    // 6. Web Bluetooth Connection Logic
+    connectBtn.addEventListener('click', async () => {
+      if (isConnected) {
+        // Disconnect
+        if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+          await bluetoothDevice.gatt.disconnect();
+        }
+        onDisconnected();
+        return;
+      }
+
+      if (!navigator.bluetooth) {
+        showBanner('Web Bluetooth is not supported in this browser. Please use Chrome or Edge.', 'error');
+        return;
+      }
+
+      try {
+        showBanner('Scanning for Robot via Bluetooth...', 'info');
+        connectBtnText.textContent = 'Connecting...';
+
+        bluetoothDevice = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [SERVICE_UUID] }],
+          optionalServices: [SERVICE_UUID]
+        });
+
+        bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+
+        const server = await bluetoothDevice.gatt.connect();
+        const service = await server.getPrimaryService(SERVICE_UUID);
+        bleCharacteristic = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
+        await bleCharacteristic.startNotifications();
+        bleCharacteristic.addEventListener('characteristicvaluechanged', handleIncomingData);
+
+        isConnected = true;
+        const name = bluetoothDevice.name || 'Robot';
+        connectBtnText.textContent = 'Connected: ' + name;
+        connectBtn.className = 'px-3 sm:px-3.5 py-1.5 text-xs font-mono font-medium text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 rounded hover:bg-emerald-900/40 transition-colors flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95';
+        showBanner('Connected to ' + name + '. Telemetry streaming.', 'success');
+        logPacket('sys', 'Connected to GATT Server: ' + name);
+
+      } catch (err) {
+        connectBtnText.textContent = 'Connect Robot';
+        if (err.name !== 'NotFoundError') {
+          showBanner('Connection failed: ' + err.message, 'error');
+          logPacket('err', 'BLE Error: ' + err.message);
+        } else {
+          alertBanner.classList.add('hidden');
+        }
+      }
+    });
+
+    function onDisconnected() {
+      isConnected = false;
+      connectBtnText.textContent = 'Connect Robot';
+      connectBtn.className = 'px-3 sm:px-3.5 py-1.5 text-xs font-mono font-medium text-zinc-200 bg-[#21232c] border border-[#30333f] rounded hover:bg-[#2b2d39] hover:border-zinc-500 transition-colors flex items-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95';
+      showBanner('Robot disconnected.', 'info');
+      logPacket('err', 'Robot disconnected');
+      updateRobotPose(0);
+    }
+
+    // 7. Parse Incoming BLE Packets
+    const decoder = new TextDecoder('utf-8');
+    function handleIncomingData(event) {
+      const value = event.target.value;
+      const text = decoder.decode(value);
+      logPacket('rx', text);
+
+      let parsedAngle = null;
+      let parsedMotor = null;
+
+      if (text.includes('Angle:')) {
+        const m = text.match(/Angle:\s*([-\d.]+)/i);
+        if (m) parsedAngle = parseFloat(m[1]);
+      } else if (text.includes('A:')) {
+        const m = text.match(/A:\s*([-\d.]+)/i);
+        if (m) parsedAngle = parseFloat(m[1]);
+      }
+
+      if (text.includes('Motor:')) {
+        const m = text.match(/Motor:\s*([-\d.]+)/i);
+        if (m) parsedMotor = parseInt(m[1], 10);
+      } else if (text.includes('M:')) {
+        const m = text.match(/M:\s*([-\d.]+)/i);
+        if (m) parsedMotor = parseInt(m[1], 10);
+      }
+
+      if (parsedAngle !== null && !isNaN(parsedAngle)) {
+        const now = Date.now();
+        const dt = Math.max(0.01, (now - lastAngleTime) / 1000);
+        gyroRate = Number(((parsedAngle - currentAngle) / dt).toFixed(1));
+        lastAngleTime = now;
+
+        updateRobotPose(parsedAngle);
+        telemetryRate.textContent = (gyroRate >= 0 ? '+' : '') + gyroRate.toFixed(1);
+      }
+
+      if (parsedMotor !== null) {
+        motorPwm = parsedMotor;
+        telemetryMotor.textContent = parsedMotor;
+      }
+    }
+
+    // 8. Motor UI Updates
+    function updateMotorUI() {
+      if (isEstop) {
+        telemetryStatus.textContent = 'EMERGENCY STOP';
+        telemetryStatus.className = 'text-base sm:text-lg font-mono font-bold text-rose-400';
+        motorStateSubtext.textContent = 'EMERGENCY STOPPED';
+        estopBtnText.textContent = 'Clear Emergency Stop';
+        estopBtn.className = 'min-h-[48px] py-3 px-4 rounded border font-mono text-xs font-bold tracking-wide flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] bg-rose-950/90 border-rose-500 text-rose-200 ring-2 ring-rose-500/30';
+        enableMotorBtn.disabled = true;
+        enableMotorBtn.className = 'min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all opacity-40 bg-[#1b1c24] border-[#292c37] text-zinc-300';
+        robotLed.setAttribute('fill', '#f43f5e');
+      } else if (!isMotorsEnabled) {
+        telemetryStatus.textContent = 'OFF';
+        telemetryStatus.className = 'text-base sm:text-lg font-mono font-bold text-zinc-400';
+        motorStateSubtext.textContent = 'MOTORS DISABLED';
+        estopBtnText.textContent = 'Emergency Stop';
+        estopBtn.className = 'min-h-[48px] py-3 px-4 rounded border font-mono text-xs font-bold tracking-wide flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] bg-[#221317] hover:bg-[#2e161c] border-rose-900/80 text-rose-300 hover:border-rose-600 hover:text-white';
+        enableMotorBtn.disabled = false;
+        enableMotorBtn.className = 'min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-[#1b1c24] border-[#292c37] text-zinc-300 hover:bg-[#222530] hover:text-white';
+        disableMotorBtn.className = 'min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-[#252835] border-zinc-600 text-zinc-100';
+        robotLed.setAttribute('fill', '#64748b');
+      } else {
+        telemetryStatus.textContent = 'ACTIVE';
+        telemetryStatus.className = 'text-base sm:text-lg font-mono font-bold text-emerald-400';
+        motorStateSubtext.textContent = 'MOTORS ENABLED';
+        estopBtnText.textContent = 'Emergency Stop';
+        estopBtn.className = 'min-h-[48px] py-3 px-4 rounded border font-mono text-xs font-bold tracking-wide flex items-center justify-center gap-2.5 transition-all cursor-pointer active:scale-[0.98] bg-[#221317] hover:bg-[#2e161c] border-rose-900/80 text-rose-300 hover:border-rose-600 hover:text-white';
+        enableMotorBtn.disabled = false;
+        enableMotorBtn.className = 'min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-emerald-950/60 border-emerald-700 text-emerald-300';
+        disableMotorBtn.className = 'min-h-[44px] py-2.5 px-3 rounded border font-mono text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.98] bg-[#1b1c24] border-[#292c37] text-zinc-300 hover:bg-[#222530] hover:text-white';
+        robotLed.setAttribute('fill', '#10b981');
+      }
+    }
+
+    enableMotorBtn.addEventListener('click', () => sendCommand('CMD:ENABLE'));
+    disableMotorBtn.addEventListener('click', () => sendCommand('CMD:DISABLE'));
+    estopBtn.addEventListener('click', () => {
+      if (isEstop) {
+        sendCommand('CMD:ENABLE');
+      } else {
+        sendCommand('CMD:ESTOP');
+      }
+    });
+
+    // 9. PID Sliders & Apply Action
+    kpSlider.addEventListener('input', () => { kpValText.textContent = parseFloat(kpSlider.value).toFixed(1); });
+    kiSlider.addEventListener('input', () => { kiValText.textContent = parseFloat(kiSlider.value).toFixed(2); });
+    kdSlider.addEventListener('input', () => { kdValText.textContent = parseFloat(kdSlider.value).toFixed(2); });
+
+    applyPidBtn.addEventListener('click', () => {
+      const kp = parseFloat(kpSlider.value).toFixed(1);
+      const ki = parseFloat(kiSlider.value).toFixed(2);
+      const kd = parseFloat(kdSlider.value).toFixed(2);
+      const cmd = `PID:${kp},${ki},${kd}`;
+      sendCommand(cmd);
+
+      // Visual feedback
+      const originalText = applyPidBtn.innerHTML;
+      applyPidBtn.innerHTML = `
+        <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+        <span>PID Sent: ${cmd}</span>
+      `;
+      setTimeout(() => { applyPidBtn.innerHTML = originalText; }, 1500);
+    });
+
+    // 10. Calibration Buttons
+    tareBtn.addEventListener('click', () => {
+      sendCommand('CMD:TARE');
+      updateRobotPose(0);
+    });
+    resetBtn.addEventListener('click', () => {
+      updateRobotPose(0);
+      telemetryRate.textContent = '+0.0';
+    });
+
+    // 11. Command Form
+    cmdForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const cmd = cmdInput.value.trim();
+      if (!cmd) return;
+      sendCommand(cmd);
+      cmdInput.value = '';
+    });
+
+    // 12. Interactive Drag & Tilt on Robot Stage (Testbench interaction)
+    const robotSvg = document.getElementById('robotSvg');
+    let isDraggingRobot = false;
+
+    function handleDragTilt(clientX, clientY) {
+      if (!robotSvg) return;
+      const rect = robotSvg.getBoundingClientRect();
+      const scaleX = 560 / rect.width;
+      const scaleY = 380 / rect.height;
+      const svgX = (clientX - rect.left) * scaleX;
+      const svgY = (clientY - rect.top) * scaleY;
+
+      const dx = svgX - pivotX;
+      const dy = wheelCenterY - svgY;
+      let deg = Math.atan2(dx, dy) * (180 / Math.PI);
+      deg = Math.max(-45, Math.min(45, deg));
+      updateRobotPose(Number(deg.toFixed(2)));
+    }
+
+    if (robotSvg) {
+      robotSvg.style.cursor = 'grab';
+      robotSvg.addEventListener('mousedown', (e) => {
+        isDraggingRobot = true;
+        robotSvg.style.cursor = 'grabbing';
+        handleDragTilt(e.clientX, e.clientY);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isDraggingRobot) handleDragTilt(e.clientX, e.clientY);
+      });
+      window.addEventListener('mouseup', () => {
+        if (isDraggingRobot) {
+          isDraggingRobot = false;
+          if (robotSvg) robotSvg.style.cursor = 'grab';
+        }
+      });
+
+      robotSvg.addEventListener('touchstart', (e) => {
+        if (e.touches && e.touches[0]) {
+          isDraggingRobot = true;
+          handleDragTilt(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+      window.addEventListener('touchmove', (e) => {
+        if (isDraggingRobot && e.touches && e.touches[0]) {
+          handleDragTilt(e.touches[0].clientX, e.touches[0].clientY);
+        }
+      }, { passive: true });
+      window.addEventListener('touchend', () => {
+        isDraggingRobot = false;
+      });
+    }
+
+    // 13. Auto-Resize Observer for Responsive Canvas Redraw
+    if (window.ResizeObserver && angleHistoryCanvas && angleHistoryCanvas.parentElement) {
+      const ro = new ResizeObserver(() => {
+        drawAngleHistory();
+      });
+      ro.observe(angleHistoryCanvas.parentElement);
+    } else {
+      window.addEventListener('resize', () => {
+        drawAngleHistory();
+      });
+    }
+
+    // 14. Initial Baseline Startup Seeding
+    const initNow = Date.now();
+    for (let i = 12; i >= 0; i--) {
+      const t = initNow - i * 200;
+      const timeStr = new Date(t).toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+      angleHistory.push({ time: t, timeStr, angle: 0.0 });
+    }
+    if (historyCountText) historyCountText.textContent = `${angleHistory.length} samples`;
+    updateMinMax();
+    drawAngleHistory();
+  </script>
+</body>
+</html>
